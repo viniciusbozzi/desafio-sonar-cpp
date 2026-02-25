@@ -89,6 +89,9 @@ public:
     // A IHM lê os dados do buffer circular e o index atual
     void readSignalSamples(float* out_buffer, std::size_t out_capacity, std::size_t& out_head_index) const;
 
+    // Retorna true se a memória compartilhada foi populada corretamente
+    bool isValid() const { return _shm_params.isValid() && _shm_signal.isValid(); }
+
 private:
     bool _is_host;
     PosixShmSegment _shm_params;

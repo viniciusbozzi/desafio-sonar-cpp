@@ -59,15 +59,16 @@ int main() {
     // Instancia interface de shm como CLIENTE (is_host = false)
     sonar::SonarSharedMemory shm_client(false);
 
-    // Tentativa inicial de ler para validar conexao
-    sonar::SignalParams params = shm_client.readParams();
-    if (params.sample_rate <= 0.0f) {
-        std::cerr << "AVISO: O generator_app parece nao estar rodando ou a memoria compartilhada falhou.\n"
-                  << "Voce pode configurar parametros, mas eles so terao efeito quando o gerador iniciar.\n";
-    } else {
-        std::cout << "Conectado à Memória Compartilhada do Gerador com sucesso!\n";
-        printStatus(params);
+    if (!shm_client.isValid()) {
+        std::cerr << "ERRO FATAL: O generator_app não está rodando.\n"
+                  << "Não foi possível conectar à Memória Compartilhada do Sonar.\n"
+                  << "Inicie o ./generator_app primeiro.\n";
+        return 1;
     }
+
+    std::cout << "Conectado à Memória Compartilhada do Gerador com sucesso!\n";
+    sonar::SignalParams params = shm_client.readParams();
+    printStatus(params);
 
     printHelp();
 
