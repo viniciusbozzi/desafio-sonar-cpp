@@ -1,0 +1,20 @@
+# Arquivos de compilação e build
+/build/
+/bin/
+/lib/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# Binários e executáveis 
+*.o
+*.a
+*.so
+
+# Configurações da IDE 
+.vscode/
+*.swp
+*~
