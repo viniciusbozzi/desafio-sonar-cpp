@@ -27,7 +27,11 @@ target_link_libraries(sonar_core PUBLIC Threads::Threads rt)
 add_executable(generator_app src/generator_app.cpp)
 target_link_libraries(generator_app PRIVATE sonar_core)
 
-# ─── Executável 2: ihm_viewer (Processo de Visualização — IHM) ───────────────
+# ─── Executável 2: control_app (Processo de Controle CLI) ────────────────────
+add_executable(control_app src/control_app.cpp)
+target_link_libraries(control_app PRIVATE sonar_core)
+
+# ─── Executável 3: ihm_viewer (Processo de Visualização — IHM) ───────────────
 add_executable(ihm_viewer src/ihm_viewer.cpp)
 target_link_libraries(ihm_viewer PRIVATE sonar_core ${GTKMM_LIBRARIES})
 
