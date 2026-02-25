@@ -18,9 +18,10 @@ link_directories(${GTKMM_LIBRARY_DIRS})
 # Contém código compartilhado entre os três executáveis (SineGenerator, etc.)
 add_library(sonar_core STATIC
     src/sine_generator.cpp
+    src/shared_memory.cpp
 )
 target_include_directories(sonar_core PUBLIC include)
-target_link_libraries(sonar_core PUBLIC Threads::Threads)
+target_link_libraries(sonar_core PUBLIC Threads::Threads rt)
 
 # ─── Executável 1: generator_app (Processo de Geração) ───────────────────────
 add_executable(generator_app src/generator_app.cpp)

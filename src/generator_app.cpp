@@ -31,6 +31,7 @@
 #include "sine_generator.hpp"
 #include "shared_buffer.hpp"
 #include "signal_params.hpp"
+#include "shared_memory.hpp"
 
 #include <iostream>
 #include <thread>
@@ -38,6 +39,7 @@
 #include <csignal>
 #include <chrono>
 #include <cstdlib>
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Variável global de controle de shutdown (sinal SIGINT/SIGTERM)
@@ -68,19 +70,17 @@ static void generation_thread(sonar::SineGenerator& gen,
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Thread de saída: consome amostras e imprime em stdout (CSV simples)
+// Thread de saída: consome amostras do buffer e escreve na Memória Compartilhada
 // ──────────────────────────────────────────────────────────────────────────────
-static void output_thread(sonar::SharedBuffer<float>& buffer) {
-    std::size_t index = 0;
+static void output_thread(sonar::SharedBuffer<float>& buffer, sonar::SonarSharedMemory& shm) {
     while (g_running.load(std::memory_order_relaxed)) {
-        auto samples = buffer.pop(256);
-        for (float s : samples) {
-            // Formato: índice,valor — fácil de plotar com gnuplot ou Python
-            std::cout << index++ << ',' << s << '\n';
+        auto samples = buffer.pop(256); // Bloqueia até ter amostras
+        if (!samples.empty()) {
+            shm.writeSignalSamples(samples.data(), samples.size());
         }
-        std::cout.flush();
     }
 }
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // main
@@ -96,13 +96,17 @@ int main(int argc, char* argv[]) {
     if (argc > 2) params.amplitude    = std::atof(argv[2]);
     if (argc > 3) params.sample_rate  = std::atof(argv[3]);
 
-    std::cerr << "[generator_app] Iniciando gerador de sinal\n"
-              << "  Frequência : " << params.frequency_hz << " Hz\n"
-              << "  Amplitude  : " << params.amplitude    << "\n"
-              << "  Sample rate: " << params.sample_rate  << " Hz\n"
-              << "  Pressione Ctrl+C para encerrar.\n";
+    // Inicializa a Memória Compartilhada como HOST (cria as regiões de shm)
+    sonar::SonarSharedMemory shm_host(true);
+    
+    // Escreve os parâmetros iniciais lidos via linha de comando
+    shm_host.writeParams(params);
 
-    // Instancia gerador e buffer circular (capacidade = 2 segundos de audio)
+    std::cerr << "[generator_app] Iniciando gerador de sinal\n"
+              << "  Pressione Ctrl+C para encerrar.\n"
+              << "  Aguardando conexoes no 'control_app' ou 'ihm_viewer'...\n";
+
+    // Instancia gerador e buffer circular
     sonar::SineGenerator gen(params);
     const std::size_t buffer_capacity = static_cast<std::size_t>(params.sample_rate) * 2;
     sonar::SharedBuffer<float> shared_buf(buffer_capacity);
@@ -111,9 +115,24 @@ int main(int argc, char* argv[]) {
 
     // Lança threads de geração e saída
     std::thread gen_thr(generation_thread, std::ref(gen), std::ref(shared_buf), CHUNK_SIZE);
-    std::thread out_thr(output_thread, std::ref(shared_buf));
+    std::thread out_thr(output_thread, std::ref(shared_buf), std::ref(shm_host));
 
-    // Main thread aguarda — poderia ler stdin para ajustar parâmetros aqui
+    // A Main thread agora se encarrega de ler periodicamente os parâmetros
+    // da memória compartilhada e atualizar o SineGenerator dinamicamente.
+    while (g_running.load(std::memory_order_relaxed)) {
+        sonar::SignalParams p = shm_host.readParams();
+        
+        // Se a frequência mudar, ou a amplitude, o generator reflete a mudança 
+        // A Thread Safety já é gerida pelo spinlock atômico dentro do SineGenerator.
+        gen.setParams(p);
+        
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    // Acorda a thread de saída caso esteja bloqueada no pop vazia
+    std::vector<float> empty_wake;
+    shared_buf.push(empty_wake);
+
     gen_thr.join();
     out_thr.join();
 
