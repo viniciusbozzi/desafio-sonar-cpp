@@ -32,12 +32,12 @@ O sistema é composto por **três processos independentes** que se comunicam via
 ```
 ISignalSource  (interface abstrata — signal_source.hpp)
 │
-├── SineGenerator          ← Commit 1  [implementado]
+├── SineGenerator          ←  [implementado]
 │     Parâmetros: freq, amplitude, tipo de onda
 │     Formas suportadas: senoide, quadrada, triangular, dente-de-serra
 │
-├── WavFileSource          ← futuro
-│     Lê arquivo WAV via libsndfile, gera amostras normalizadas
+├── WavFileSource          ←  [implementado]
+│     Lê arquivo WAV da std::ifstream via decodificador PCM nativo
 │
 └── SharedMemorySource     ← futuro
       Lê stream de shm externo (sensor físico, simulador, etc.)

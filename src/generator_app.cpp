@@ -32,6 +32,7 @@
 #include "shared_buffer.hpp"
 #include "signal_params.hpp"
 #include "shared_memory.hpp"
+#include "wav_file_source.hpp"
 
 #include <iostream>
 #include <thread>
@@ -53,7 +54,7 @@ static void signal_handler(int /*sig*/) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Thread de geração: produz amostras e empurra para o SharedBuffer
 // ──────────────────────────────────────────────────────────────────────────────
-static void generation_thread(sonar::SineGenerator& gen,
+static void generation_thread(sonar::ISignalSource& gen,
                                sonar::SharedBuffer<float>& buffer,
                                std::size_t chunk_size)
 {
@@ -106,15 +107,23 @@ int main(int argc, char* argv[]) {
               << "  Pressione Ctrl+C para encerrar.\n"
               << "  Aguardando conexoes no 'control_app' ou 'ihm_viewer'...\n";
 
-    // Instancia gerador e buffer circular
-    sonar::SineGenerator gen(params);
+    // Instancia gerador polimorficamente via Interface Abstrata (Princípio Aberto/Fechado OCP)
+    std::unique_ptr<sonar::ISignalSource> gen = std::make_unique<sonar::SineGenerator>(params);
+
+    // =========================================================================
+    // (Leitura de Arquivo WAV)
+    // Para testar a leitura de arquivo, comente a linha do SineGenerator acima e
+    // descomente a linha abaixo
+    // =========================================================================
+    // std::unique_ptr<sonar::ISignalSource> gen = std::make_unique<sonar::WavFileSource>("teste.wav");
+
     const std::size_t buffer_capacity = static_cast<std::size_t>(params.sample_rate) * 2;
     sonar::SharedBuffer<float> shared_buf(buffer_capacity);
 
     constexpr std::size_t CHUNK_SIZE = 512; // amostras por bloco de geração
 
-    // Lança threads de geração e saída
-    std::thread gen_thr(generation_thread, std::ref(gen), std::ref(shared_buf), CHUNK_SIZE);
+    // Lança threads de geração e saída usando referência ao gerador abstrato
+    std::thread gen_thr(generation_thread, std::ref(*gen), std::ref(shared_buf), CHUNK_SIZE);
     std::thread out_thr(output_thread, std::ref(shared_buf), std::ref(shm_host));
 
     // A Main thread agora se encarrega de ler periodicamente os parâmetros
@@ -122,9 +131,12 @@ int main(int argc, char* argv[]) {
     while (g_running.load(std::memory_order_relaxed)) {
         sonar::SignalParams p = shm_host.readParams();
         
-        // Se a frequência mudar, ou a amplitude, o generator reflete a mudança 
+        // Atualiza os parâmetros do gerador em tempo de execução (se for um oscilador controlável).
         // A Thread Safety já é gerida pelo spinlock atômico dentro do SineGenerator.
-        gen.setParams(p);
+        // O pattern dynamic_cast protege fontes futuras 
+        if (auto controllable_gen = dynamic_cast<sonar::SineGenerator*>(gen.get())) {
+            controllable_gen->setParams(p);
+        }
         
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }

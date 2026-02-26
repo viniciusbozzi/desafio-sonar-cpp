@@ -19,6 +19,7 @@ link_directories(${GTKMM_LIBRARY_DIRS})
 add_library(sonar_core STATIC
     src/sine_generator.cpp
     src/shared_memory.cpp
+    src/wav_file_source.cpp
 )
 target_include_directories(sonar_core PUBLIC include)
 target_link_libraries(sonar_core PUBLIC Threads::Threads rt)
