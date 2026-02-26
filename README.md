@@ -91,4 +91,7 @@ O `generator_app` internamente foi arquitetado sob o modelo **Producer-Consumer*
 O tráfego dos valores da matemática para o I/O ocorre via array compartilhado com `std::mutex / std::condition_variable / std::atomic` sem overhead de serialização.
 
 
-Para saber mais sobre as decisões detalhadas, confira [ARCHITECTURE.md](docs/ARCHITECTURE.md) e [THREADS_vs_PROCESSES.md](docs/THREADS_vs_PROCESSES.md).
+Para saber mais sobre as documentações profundas cobradas nos requisitos do Desafio, confira os documentos em anexo gerados em `docs/`:
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Diagramas globais, OCP e Memória.
+- [THREADS_vs_PROCESSES.md](docs/THREADS_vs_PROCESSES.md) - Escolha Concorrente.
+- [IHM_ANALYSIS.md](docs/IHM_ANALYSIS.md) - Análise Crítica de Interface Homem-Máquina (IHM) (GTKmm vs Qt vs Java vs Web).
