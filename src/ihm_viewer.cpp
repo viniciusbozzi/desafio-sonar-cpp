@@ -1,17 +1,14 @@
-#include <gtkmm.h>
+#include "sonar_window.hpp"
+#include <gtkmm/application.h>
 
 int main(int argc, char *argv[]) {
     // Inicializa o loop principal do aplicativo GTK
-    // O identificador "org.desafio.sonar.ihm" é um padrão de nomenclatura (Reverse DNS)
     auto app = Gtk::Application::create(argc, argv, "org.desafio.sonar.ihm");
 
-    // Instancia a janela principal
-    Gtk::Window window;
-    
-    // Configurações básicas da janela
-    window.set_default_size(800, 600);
-    window.set_title("Desafio Sonar - IHM Visualizador (Teste gtkmm)");
+    // Instancia a nossa janela customizada para o sonar
+    sonar::SonarWindow window;
 
-    // O método run() mostra a janela e bloqueia a execução até que ela seja fechada
+    // O método run() mostra a janela e bloqueia a execução no loop de eventos 
+    // até que ela seja fechada pelo usuário, executando os timers a ~60 fps
     return app->run(window);
 }

@@ -32,7 +32,7 @@ add_executable(control_app src/control_app.cpp)
 target_link_libraries(control_app PRIVATE sonar_core)
 
 # ─── Executável 3: ihm_viewer (Processo de Visualização — IHM) ───────────────
-add_executable(ihm_viewer src/ihm_viewer.cpp)
+add_executable(ihm_viewer src/ihm_viewer.cpp src/sonar_window.cpp)
 target_link_libraries(ihm_viewer PRIVATE sonar_core ${GTKMM_LIBRARIES})
 
 # ─── Mensagem de status no configure ─────────────────────────────────────────
