@@ -8,7 +8,7 @@ O sistema é composto por **três processos independentes** que se comunicam via
 ```
 ┌─────────────────────────────────┐
 │        generator_app            │  Processo 1
-│  Thread de geração ─────────►   │  SineGenerator → SharedBuffer
+│  Thread de geração ─────────►   │  ISignalSource → SharedBuffer
 │  Thread de saída   ◄─────────   │                → shm /sonar_signal
 └────────────────┬────────────────┘
                  │ lê /sonar_params
@@ -37,7 +37,7 @@ ISignalSource  (interface abstrata — signal_source.hpp)
 │     Formas suportadas: senoide, quadrada, triangular, dente-de-serra
 │
 ├── WavFileSource          ←  [implementado]
-│     Lê arquivo WAV da std::ifstream via decodificador PCM nativo
+│     Lê arquivo WAV da std::ifstream
 │
 └── SharedMemorySource     ← futuro
       Lê stream de shm externo (sensor físico, simulador, etc.)
@@ -54,9 +54,10 @@ O `generator_app` recebe um `std::unique_ptr<ISignalSource>` — nunca conhece
 a implementação concreta:
 
 ```cpp
-// Exemplo futuro sem mudança no generator_app:
+// Exemplo de troca de fonte de sinal (OCP em ação):
+// Basta alterar uma linha e o generator_app.cpp inteiro segue funcionando!
 std::unique_ptr<sonar::ISignalSource> src =
-    std::make_unique<sonar::WavFileSource>("torpedo.wav");
+    std::make_unique<sonar::WavFileSource>("teste.wav");
 ```
 
 ---
@@ -64,10 +65,10 @@ std::unique_ptr<sonar::ISignalSource> src =
 ## Concorrência — Threads dentro do generator_app
 
 | Thread        | Responsabilidade                          | Sincronização          |
-|--------------|-------------------------------------------|------------------------|
-| `gen_thread`  | `SineGenerator::generate()` → `push()`   | `SharedBuffer` mutex   |
+|---------------|-------------------------------------------|------------------------|
+| `gen_thread`  | `ISignalSource::generate()` → `push()`    | `SharedBuffer` mutex   |
 | `out_thread`  | `pop()` → escreve em shm / stdout         | `condition_variable`   |
-| `main thread` | ciclo de vida, shutdown via SIGINT        | `atomic<bool> g_running` |
+| `main thread` | ciclo de vida, lê params alterados        | `atomic<bool>` / mutex |
 
 **Por que threads e não subprocessos aqui?**
 Threads compartilham o mesmo espaço de endereçamento, tornando o `SharedBuffer`
@@ -95,4 +96,4 @@ Struct POD de 16 bytes mapeada diretamente em `/sonar_params` (shm):
 |--------------|----------------------------------|
 | C++17 stdlib  | threads, mutex, atomic, chrono   |
 | GTKmm 3.0    | IHM (janela + Cairo waveform)    |
-| POSIX         | shm_open, mmap (Commit 2)        |
+| POSIX         | shm_open, mmap                  |
